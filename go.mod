@@ -15,6 +15,7 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/sync v0.6.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

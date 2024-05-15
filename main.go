@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path"
@@ -46,6 +47,15 @@ type KeyEntry struct {
 	KeyFile
 	passphrase string
 	insecure   bool
+}
+
+type LighthouseDefinition struct {
+	Enabled                    bool   `yaml:"enabled"`
+	VotingPublicKey            string `yaml:"voting_public_key"`
+	Description                string `yaml:"description"`
+	Type                       string `yaml:"type"`
+	VotingKeystorePath         string `yaml:"voting_keystore_path"`
+	VotingKeystorePasswordPath string `yaml:"voting_keystore_password_path"`
 }
 
 func NewKeyEntry(sk [32]byte, pub [48]byte, insecure bool) (*KeyEntry, error) {
@@ -223,17 +233,17 @@ func (ww *WalletWriter) WriteOutputs(fpath string, prysmPass string) error {
 	if err := os.Mkdir(lighthouseKeyfilesPath, os.ModePerm); err != nil {
 		return err
 	}
-	// nimbus has different keystore names
-	nimbusKeyfileName := "keystore.json"
-	nimbusKeyfilesPath := filepath.Join(fpath, "nimbus-keys")
-	if err := os.Mkdir(nimbusKeyfilesPath, os.ModePerm); err != nil {
-		return err
-	}
-	// teku does not nest their keystores
-	tekuKeyfilesPath := filepath.Join(fpath, "teku-keys")
-	if err := os.Mkdir(tekuKeyfilesPath, os.ModePerm); err != nil {
-		return err
-	}
+	//// nimbus has different keystore names
+	//nimbusKeyfileName := "keystore.json"
+	//nimbusKeyfilesPath := filepath.Join(fpath, "nimbus-keys")
+	//if err := os.Mkdir(nimbusKeyfilesPath, os.ModePerm); err != nil {
+	//	return err
+	//}
+	//// teku does not nest their keystores
+	//tekuKeyfilesPath := filepath.Join(fpath, "teku-keys")
+	//if err := os.Mkdir(tekuKeyfilesPath, os.ModePerm); err != nil {
+	//	return err
+	//}
 
 	var g errgroup.Group
 	g.SetLimit(ww.maxParallel)
@@ -255,22 +265,22 @@ func (ww *WalletWriter) WriteOutputs(fpath string, prysmPass string) error {
 					return err
 				}
 			}
-			{
-				// nimbus
-				keyDirPath := filepath.Join(nimbusKeyfilesPath, e.PubHex())
-				if err := os.MkdirAll(keyDirPath, os.ModePerm); err != nil {
-					return err
-				}
-				if err := ioutil.WriteFile(filepath.Join(keyDirPath, nimbusKeyfileName), dat, 0644); err != nil {
-					return err
-				}
-			}
-			{
-				// teku
-				if err := ioutil.WriteFile(filepath.Join(tekuKeyfilesPath, e.PubHex()+".json"), dat, 0644); err != nil {
-					return err
-				}
-			}
+			//{
+			//	// nimbus
+			//	keyDirPath := filepath.Join(nimbusKeyfilesPath, e.PubHex())
+			//	if err := os.MkdirAll(keyDirPath, os.ModePerm); err != nil {
+			//		return err
+			//	}
+			//	if err := ioutil.WriteFile(filepath.Join(keyDirPath, nimbusKeyfileName), dat, 0644); err != nil {
+			//		return err
+			//	}
+			//}
+			//{
+			//	// teku
+			//	if err := ioutil.WriteFile(filepath.Join(tekuKeyfilesPath, e.PubHex()+".json"), dat, 0644); err != nil {
+			//		return err
+			//	}
+			//}
 			return nil
 		})
 
@@ -290,42 +300,53 @@ func (ww *WalletWriter) WriteOutputs(fpath string, prysmPass string) error {
 		}
 	}
 
-	{
-		// For Teku: they need a directory that maps name of keystore dir to name of secret file, but secret files end with `.txt`
-		secretsDirPath := filepath.Join(fpath, "teku-secrets")
-		if err := os.Mkdir(secretsDirPath, os.ModePerm); err != nil {
-			return err
-		}
-		for _, k := range ww.entries {
-			e := k
-			g.Go(func() error {
-				pubHex := e.PubHex()
-				return ioutil.WriteFile(filepath.Join(secretsDirPath, pubHex+".txt"), []byte(e.passphrase), 0644)
-			})
-
-		}
-	}
-
-	{
-		// For Lodestar: they need a directory that maps pubkey to passwords, one per file, but no 0x prefix.
-		secretsDirPath := filepath.Join(fpath, "lodestar-secrets")
-		if err := os.Mkdir(secretsDirPath, os.ModePerm); err != nil {
-			return err
-		}
-		for _, k := range ww.entries {
-			e := k
-			g.Go(func() error {
-				pubHex := e.PubHexBare()
-				return ioutil.WriteFile(filepath.Join(secretsDirPath, "0x"+pubHex), []byte(e.passphrase), 0644)
-			})
-
-		}
-	}
+	//{
+	//	// For Teku: they need a directory that maps name of keystore dir to name of secret file, but secret files end with `.txt`
+	//	secretsDirPath := filepath.Join(fpath, "teku-secrets")
+	//	if err := os.Mkdir(secretsDirPath, os.ModePerm); err != nil {
+	//		return err
+	//	}
+	//	for _, k := range ww.entries {
+	//		e := k
+	//		g.Go(func() error {
+	//			pubHex := e.PubHex()
+	//			return ioutil.WriteFile(filepath.Join(secretsDirPath, pubHex+".txt"), []byte(e.passphrase), 0644)
+	//		})
+	//
+	//	}
+	//}
+	//
+	//{
+	//	// For Lodestar: they need a directory that maps pubkey to passwords, one per file, but no 0x prefix.
+	//	secretsDirPath := filepath.Join(fpath, "lodestar-secrets")
+	//	if err := os.Mkdir(secretsDirPath, os.ModePerm); err != nil {
+	//		return err
+	//	}
+	//	for _, k := range ww.entries {
+	//		e := k
+	//		g.Go(func() error {
+	//			pubHex := e.PubHexBare()
+	//			return ioutil.WriteFile(filepath.Join(secretsDirPath, "0x"+pubHex), []byte(e.passphrase), 0644)
+	//		})
+	//
+	//	}
+	//}
 
 	// In general: a list of pubkeys.
 	pubkeys := make([]string, 0)
+
+	definitions := make([]LighthouseDefinition, 0)
+
 	for _, e := range ww.entries {
 		pubkeys = append(pubkeys, e.PubHex())
+		definitions = append(definitions, LighthouseDefinition{
+			Enabled:                    true,
+			VotingPublicKey:            e.PubHex(),
+			Description:                e.PubHex(),
+			Type:                       "local_keystore",
+			VotingKeystorePath:         filepath.Join("${VOLUME}", "keys", e.PubHex(), "voting-keystore.json"),
+			VotingKeystorePasswordPath: filepath.Join("${VOLUME}", "secrets", e.PubHex()),
+		})
 	}
 	pubsData, err := json.Marshal(pubkeys)
 	if err != nil {
@@ -335,10 +356,18 @@ func (ww *WalletWriter) WriteOutputs(fpath string, prysmPass string) error {
 		return err
 	}
 
-	// For Prysm: write outputs as a wallet and a configuration
-	if err := ww.buildPrysmWallet(filepath.Join(fpath, "prysm"), prysmPass); err != nil {
+	pubsDef, err := yaml.Marshal(definitions)
+	if err != nil {
 		return err
 	}
+	if err := ioutil.WriteFile(filepath.Join(fpath, "keys", "validator_definitions.yml"), pubsDef, 0644); err != nil {
+		return err
+	}
+
+	// For Prysm: write outputs as a wallet and a configuration
+	//if err := ww.buildPrysmWallet(filepath.Join(fpath, "prysm"), prysmPass); err != nil {
+	//	return err
+	//}
 	return g.Wait()
 }
 
